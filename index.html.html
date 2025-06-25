@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网址短缩服务</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#FF4D4F',
+                        neutral: '#F5F7FA',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .transition-custom {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-link text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">LinkShort</h1>
+            </div>
+            <nav class="hidden md:flex space-x-6">
+                <a href="#" class="text-gray-600 hover:text-primary transition-custom font-medium">首页</a>
+                <a href="#" class="text-gray-600 hover:text-primary transition-custom font-medium">功能</a>
+                <a href="#" class="text-gray-600 hover:text-primary transition-custom font-medium">隐私政策</a>
+                <a href="#" class="text-gray-600 hover:text-primary transition-custom font-medium">联系我们</a>
+            </nav>
+            <button class="md:hidden text-gray-600 focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- 网址缩短表单 -->
+        <section class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+            <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-center mb-6 text-gray-800">
+                缩短您的网址
+            </h2>
+            <form id="shortenForm" class="space-y-4">
+                <div class="relative">
+                    <input 
+                        type="url" 
+                        id="longUrl" 
+                        placeholder="输入要缩短的网址" 
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom"
+                        required
+                    >
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <i class="fa fa-globe"></i>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+                    <div class="flex-1 relative">
+                        <input 
+                            type="text" 
+                            id="customSlug" 
+                            placeholder="自定义短码（选填）" 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom"
+                            maxlength="20"
+                            pattern="[a-zA-Z0-9\-_]+"
+                            title="只能包含字母、数字、连字符和下划线"
+                        >
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i class="fa fa-keyboard-o"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="checkbox" 
+                            id="isAdultContent" 
+                            class="w-5 h-5 text-primary rounded focus:ring-primary/20 border-gray-300"
+                        >
+                        <label for="isAdultContent" class="text-gray-700">包含成人内容</label>
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-custom transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl flex items-center justify-center"
+                >
+                    <i class="fa fa-compress mr-2"></i> 缩短网址
+                </button>
+            </form>
+            
+            <!-- 结果显示区域 -->
+            <div id="result" class="mt-6 hidden">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between">
+                        <div class="mb-3 md:mb-0">
+                            <p class="text-sm text-gray-500">缩短后的链接</p>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <i class="fa fa-link text-primary"></i>
+                                <a id="shortUrl" href="#" target="_blank" class="text-primary font-medium break-all">https://linkshort.com/abc123</a>
+                            </div>
+                        </div>
+                        <button id="copyBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-custom flex items-center">
+                            <i class="fa fa-copy mr-2"></i> 复制
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 成人内容确认模态框 -->
+        <div id="ageGateModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-md w-full p-8 transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 text-secondary mb-4">
+                        <i class="fa fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-2">年龄确认</h3>
+                    <p class="text-gray-600">本文含有成人内容，请确认您已年满18岁</p>
+                </div>
+                
+                <div class="space-y-3">
+                    <button 
+                        id="confirmAdult" 
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-custom transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+                    >
+                        我已年满18岁
+                    </button>
+                    <button 
+                        id="declineAdult" 
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 px-6 rounded-lg transition-custom transform hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        我未满18岁
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fa fa-link text-primary text-2xl"></i>
+                        <h2 class="text-xl font-bold">LinkShort</h2>
+                    </div>
+                    <p class="text-gray-400">
+                        安全、快速的网址缩短服务，支持内容确认功能，保护未成年人免受不适当内容影响。
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">快速链接</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-custom">首页</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-custom">功能</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-custom">隐私政策</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-custom">联系我们</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">联系我们</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope-o text-primary mr-2"></i>
+                            <a href="mailto:support@linkshort.com" class="text-gray-400 hover:text-white transition-custom">support@linkshort.com</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-phone text-primary mr-2"></i>
+                            <span class="text-gray-400">+86 123 4567 8901</span>
+                        </li>
+                    </ul>
+                    <div class="mt-4 flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition-custom">
+                            <i class="fa fa-weibo text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-custom">
+                            <i class="fa fa-wechat text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-custom">
+                            <i class="fa fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-custom">
+                            <i class="fa fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-500">
+                <p>&copy; 2025 LinkShort. 保留所有权利。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 模拟后端API的响应数据
+        const mockApiResponse = {
+            shortUrl: 'https://linkshort.com/abc123',
+            adultContent: true,
+            adultRedirectUrl: 'https://example.com/adult-content-warning',
+            nonAdultRedirectUrl: 'https://example.com/age-restricted'
+        };
+
+        // 存储目标URL和是否是成人内容的标志
+        let targetUrl = '';
+        let isAdultContent = false;
+
+        // DOM元素
+        const shortenForm = document.getElementById('shortenForm');
+        const longUrlInput = document.getElementById('longUrl');
+        const customSlugInput = document.getElementById('customSlug');
+        const isAdultContentCheckbox = document.getElementById('isAdultContent');
+        const resultDiv = document.getElementById('result');
+        const shortUrlLink = document.getElementById('shortUrl');
+        const copyBtn = document.getElementById('copyBtn');
+        const ageGateModal = document.getElementById('ageGateModal');
+        const modalContent = document.getElementById('modalContent');
+        const confirmAdultBtn = document.getElementById('confirmAdult');
+        const declineAdultBtn = document.getElementById('declineAdult');
+
+        // 表单提交处理
+        shortenForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 显示加载状态
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 处理中...';
+            
+            try {
+                // 模拟API调用
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 生成模拟短链接
+                const longUrl = longUrlInput.value;
+                const customSlug = customSlugInput.value || generateRandomSlug();
+                const shortUrl = `https://linkshort.com/${customSlug}`;
+                
+                // 保存目标URL和成人内容标志
+                targetUrl = longUrl;
+                isAdultContent = isAdultContentCheckbox.checked;
+                
+                // 更新UI
+                shortUrlLink.href = shortUrl;
+                shortUrlLink.textContent = shortUrl;
+                resultDiv.classList.remove('hidden');
+                
+                // 添加动画效果
+                resultDiv.classList.add('animate-fadeIn');
+                
+                // 滚动到结果区域
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch (error) {
+                alert('生成短链接失败，请重试。');
+                console.error('Error:', error);
+            } finally {
+                // 恢复按钮状态
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+
+        // 复制按钮处理
+        copyBtn.addEventListener('click', function() {
+            const textToCopy = shortUrlLink.textContent;
+            
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    // 更改按钮文本
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fa fa-check mr-2"></i> 已复制';
+                    
+                    // 2秒后恢复原状
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制。');
+                });
+        });
+
+        // 短链接点击处理
+        shortUrlLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // 如果是成人内容，显示确认模态框
+            if (isAdultContent) {
+                showAgeGateModal();
+            } else {
+                // 非成人内容直接跳转
+                window.location.href = targetUrl;
+            }
+        });
+
+        // 确认成人内容按钮处理
+        confirmAdultBtn.addEventListener('click', function() {
+            hideAgeGateModal();
+            
+            // 模拟打开新的URL网域
+            window.open(mockApiResponse.adultRedirectUrl, '_blank');
+            
+            // 0.5秒后跳转到目标URL
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 500);
+        });
+
+        // 拒绝成人内容按钮处理
+        declineAdultBtn.addEventListener('click', function() {
+            hideAgeGateModal();
+            
+            // 模拟打开新的URL网域
+            window.open(mockApiResponse.nonAdultRedirectUrl, '_blank');
+            
+            // 0.5秒后跳转到目标URL
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 500);
+        });
+
+        // 显示年龄确认模态框
+        function showAgeGateModal() {
+            ageGateModal.classList.remove('hidden');
+            
+            // 触发重排后添加动画类
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        // 隐藏年龄确认模态框
+        function hideAgeGateModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                ageGateModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 生成随机短码
+        function generateRandomSlug() {
+            const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            const length = 6;
+            
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(randomNumber() * characters.length));
+            }
+            
+            return result;
+        }
+
+        // 生成更安全的随机数
+        function randomNumber() {
+            try {
+                // 尝试使用crypto API
+                const array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                return array[0] / (0xffffffff + 1);
+            } catch (error) {
+                // 备用方案：使用Math.random()
+                console.warn('无法使用crypto API，退回到Math.random()', error);
+                return Math.random();
+            }
+        }
+
+        // 添加动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .animate-fadeIn {
+                animation: fadeIn 0.3s ease-out forwards;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
